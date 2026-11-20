@@ -1,1 +1,6 @@
-
+{
+  "name": "ecovision-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EcoVision AI Project"
+}
