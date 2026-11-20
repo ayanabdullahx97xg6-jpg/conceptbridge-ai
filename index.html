@@ -1,170 +1,51 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EcoVision AI</title>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<style>
-*{box-sizing:border-box}
-body{margin:0;background:#07130f;color:#effff4;font-family:Arial}
-header{padding:22px 8%;border-bottom:1px solid #244436;color:#72edaa;font-size:23px;font-weight:bold}
-main{max-width:900px;margin:auto;padding:45px 20px}
-h1{font-size:48px;margin-bottom:10px}
-p{color:#a9c5b4;line-height:1.6}
-.panel{background:#10251b;border:1px solid #28513a;border-radius:18px;padding:25px;margin-top:20px}
-input{width:100%;padding:12px;margin:12px 0;background:#07130f;color:white;border:1px solid #456b53;border-radius:8px}
-button{padding:13px 20px;background:#72edaa;color:#07130f;border:0;border-radius:9px;font-weight:bold;cursor:pointer;margin:8px 5px 8px 0}
-button:disabled{opacity:.5}
-#preview{max-width:100%;max-height:280px;display:block;margin-top:15px;border-radius:12px}
-#results{margin-top:20px}
-.item{padding:14px;margin:10px 0;background:#183627;border-radius:10px}
-.bar{height:8px;background:#294936;border-radius:10px;margin-top:8px;overflow:hidden}
-.fill{height:100%;background:#72edaa}
-#status{color:#72edaa;margin-top:15px}
-small{color:#a9c5b4}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoVision AI - Sustainability & Waste Disposal</title>
+    <!-- Teachable Machine & TensorFlow Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>♻ EcoVision AI</header>
-<main>
-<p style="color:#72edaa;letter-spacing:3px">AI POWERED SUSTAINABILITY</p>
-<h1>Understand your waste.</h1>
-<p>Upload an image and let your trained AI model identify the material.</p>
+    <div class="container">
+        <h1>AI POWERED SUSTAINABILITY</h1>
+        <p style="text-align: center; color: #666;">Understand your waste. Upload an image and let your trained AI model identify the material.</p>
 
-<section class="panel">
-<h2>Connect your AI model</h2>
-<p>Paste your Teachable Machine model URL below.</p>
-<input id="modelUrl" type="url" placeholder="https://teachablemachine.withgoogle.com/models/XXXX/">
-<button id="connect">Connect AI Model</button>
-<div id="status">AI model not connected.</div>
-</section>
+        <!-- Model Connection Section -->
+        <div class="section" style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <h3>Connect your AI model</h3>
+            <p style="font-size: 14px; color: #555;">Paste your Teachable Machine model URL below:</p>
+            <input type="text" id="modelUrl" placeholder="https://teachablemachine.withgoogle.com/models/XXXX/">
+            <button id="connectBtn">Connect AI Model</button>
+            <p id="modelStatus" style="font-size: 14px; color: #d32f2f; font-weight: bold;">AI model not connected.</p>
+        </div>
 
-<section class="panel">
-<h2>Analyze an item</h2>
-<input id="file" type="file" accept="image/*">
-<img id="preview" hidden alt="Uploaded item">
-<button id="analyze" disabled>Analyze Image</button>
-<div id="results"></div>
-</section>
+        <!-- Analysis Section -->
+        <div class="section" style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <h3>Analyze an item</h3>
+            <input type="file" id="imageInput" accept="image/*">
+            <br>
+            <div id="imagePreviewContainer" style="margin: 10px 0; text-align: center;">
+                <!-- Image preview will show here -->
+            </div>
+            <button id="analyzeBtn">Analyze Image</button>
+        </div>
 
-<section class="panel">
-<h2>Responsible disposal</h2>
-<p id="advice">Your material-specific guidance will appear here after analysis.</p>
-<small>AI predictions can be incorrect. Always check local recycling rules.</small>
-</section>
-</main>
+        <!-- Result Section -->
+        <div class="section" style="padding: 15px; background: #e8f5e9; border-radius: 8px;">
+            <h3>Responsible disposal</h3>
+            <p style="font-size: 14px; color: #555;">Your material-specific guidance will appear here after analysis.</p>
+            <div id="result"></div>
+        </div>
 
-<script>
-let model = null;
-let imageURL = null;
+        <p style="font-size: 12px; color: #888; text-align: center; margin-top: 20px;">
+            AI predictions can be incorrect. Always check local recycling rules.
+        </p>
+    </div>
 
-const status = document.getElementById("status");
-const preview = document.getElementById("preview");
-const analyze = document.getElementById("analyze");
-
-document.getElementById("connect").onclick = async () => {
-  let url = document.getElementById("modelUrl").value.trim();
-
-  if (!url) {
-    status.textContent = "Please enter your model URL.";
-    return;
-  }
-
-  url = url.endsWith("/") ? url : url + "/";
-  status.textContent = "Loading AI model...";
-  document.getElementById("connect").disabled = true;
-
-  try {
-    model = await tmImage.load(
-      url + "model.json",
-      url + "metadata.json"
-    );
-    status.textContent = "AI model connected successfully!";
-    analyze.disabled = !preview.src;
-  } catch (error) {
-    model = null;
-    status.textContent = "Could not load model. Check the URL and try again.";
-  }
-
-  document.getElementById("connect").disabled = false;
-};
-
-document.getElementById("file").onchange = event => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    status.textContent = "Please select an image.";
-    return;
-  }
-
-  if (imageURL) URL.revokeObjectURL(imageURL);
-  imageURL = URL.createObjectURL(file);
-  preview.src = imageURL;
-  preview.hidden = false;
-  analyze.disabled = !model;
-  document.getElementById("results").innerHTML = "";
-};
-
-analyze.onclick = async () => {
-  if (!model || !preview.src) return;
-
-  analyze.disabled = true;
-  status.textContent = "AI is analyzing your image...";
-
-  try {
-    const predictions = await model.predict(preview);
-    predictions.sort((a,b) => b.probability - a.probability);
-
-    const results = document.getElementById("results");
-    results.innerHTML = "<h3>AI Predictions</h3>";
-
-    const best = predictions[0];
-    const confidence = best.probability * 100;
-
-    predictions.forEach(item => {
-      const percent = (item.probability * 100).toFixed(1);
-      const row = document.createElement("div");
-      row.className = "item";
-
-      const name = document.createElement("strong");
-      name.textContent = item.className + " — " + percent + "%";
-
-      const bar = document.createElement("div");
-      bar.className = "bar";
-
-      const fill = document.createElement("div");
-      fill.className = "fill";
-      fill.style.width = percent + "%";
-
-      bar.appendChild(fill);
-      row.appendChild(name);
-      row.appendChild(bar);
-      results.appendChild(row);
-    });
-
-    const advice = {
-      plastic: "Check the recycling symbol. Keep recyclable plastic separate and follow local collection rules.",
-      paper: "Keep paper clean and dry before placing it in a suitable recycling collection.",
-      metal: "Separate metal items and check whether your local recycling service accepts them."
-    };
-
-    document.getElementById("advice").textContent =
-      confidence < 60
-      ? "The model is uncertain. Please verify the material manually before sorting."
-      : (advice[best.className.toLowerCase()] ||
-         "Check local disposal guidance for this predicted material.");
-
-    status.textContent = "Analysis complete. Prediction is not guaranteed.";
-  } catch (error) {
-    status.textContent = "Analysis failed. Please try another image.";
-  }
-
-  analyze.disabled = false;
-};
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
