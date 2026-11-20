@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoVision AI</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#07130f;color:#ecfff3;font-family:Arial,sans-serif}
+header{padding:25px 8%;display:flex;justify-content:space-between;border-bottom:1px solid #244436}
+.logo{font-size:23px;font-weight:bold;color:#72edaa}
+.hero{padding:65px 8% 35px;max-width:850px}
+.tag{color:#72edaa;letter-spacing:3px;font-size:12px}
+h1{font-size:clamp(38px,7vw,68px);margin:15px 0}
+p{color:#a9c5b4;line-height:1.7}
+main{padding:20px 8%;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.panel{background:#10251b;border:1px solid #28513a;border-radius:18px;padding:25px}
+h2{font-size:20px}
+input{width:100%;margin:20px 0;color:#fff}
+button{background:#72edaa;color:#062014;border:0;padding:14px 20px;border-radius:10px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+#preview{width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:15px}
+.result{margin-top:18px;padding:16px;background:#183627;border-radius:12px;display:none}
+.big{font-size:27px;color:#72edaa;font-weight:bold}
+small{color:#a9c5b4}
+footer{padding:35px 8%;color:#779787}
+@media(max-width:700px){main{grid-template-columns:1fr}.hero{padding-top:40px}}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">♻ EcoVision AI</div>
+<div>SMART RECYCLING</div>
+</header>
+
+<section class="hero">
+<div class="tag">AI FOR A CLEANER PLANET</div>
+<h1>Waste less.<br><span style="color:#72edaa">Think smarter.</span></h1>
+<p>Upload a waste item image and explore how AI can help identify materials and guide responsible disposal.</p>
+</section>
+
+<main>
+<section class="panel">
+<h2>01 / Upload an item</h2>
+<p>Select a clear image of plastic, paper or metal.</p>
+<input type="file" id="file" accept="image/*">
+<img id="preview" alt="Your selected item preview" hidden>
+<br><br>
+<button id="analyze">Analyze image</button>
+<div id="status"><small>AI model is not connected yet.</small></div>
+</section>
+
+<section class="panel">
+<h2>02 / AI Analysis</h2>
+<p>Material identification and disposal guidance will appear here.</p>
+<div class="result" id="result">
+<div class="big" id="material"></div>
+<p id="guidance"></p>
+<small id="confidence"></small>
+</div>
+</section>
+</main>
+
+<footer>EcoVision AI · A student-built sustainability project</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script>
+const MODEL_URL = ""; // Add your Teachable Machine model URL here
+let model = null;
+let selectedImage = null;
+
+const file = document.getElementById("file");
+const preview = document.getElementById("preview");
+const status = document.getElementById("status");
+const result = document.getElementById("result");
+
+file.addEventListener("change", () => {
+  const f = file.files[0];
+  if (!f) return;
+  if (!f.type.startsWith("image/")) {
+    status.textContent = "Please choose an image file.";
+    return;
+  }
+  selectedImage = URL.createObjectURL(f);
+  preview.src = selectedImage;
+  preview.hidden = false;
+  result.style.display = "none";
+  status.textContent = "Image ready. Connect the AI model to analyze it.";
+});
+
+document.getElementById("analyze").addEventListener("click", async () => {
+  if (!preview.src || preview.hidden) {
+    status.textContent = "Please upload an image first.";
+    return;
+  }
+  if (!MODEL_URL) {
+    status.textContent = "AI model abhi connect nahi hai. Is demo mein real prediction available nahi.";
+    return;
+  }
+
+  try {
+    status.textContent = "Analyzing...";
+    const button = document.getElementById("analyze");
+    button.disabled = true;
+    if (!model) model = await tmImage.load(
+      MODEL_URL + "model.json",
+      MODEL_URL + "metadata.json"
+    );
+    const predictions = await model.predict(preview);
+    predictions.sort((a,b) => b.probability - a.probability);
+    const best = predictions[0];
+    const name = best.className;
+    const advice = {
+      plastic: "Check the recycling symbol and local recycling rules before disposal.",
+      paper: "Keep paper clean and dry for recycling.",
+      metal: "Separate metal items and check local metal recycling options."
+    };
+    document.getElementById("material").textContent = name;
+    document.getElementById("guidance").textContent =
+      advice[name.toLowerCase()] || "Check local guidance for this material.";
+    document.getElementById("confidence").textContent =
+      "Model confidence: " + (best.probability * 100).toFixed(1) + "% — prediction, not a guarantee.";
+    result.style.display = "block";
+    status.textContent = "Analysis complete.";
+    button.disabled = false;
+  } catch(e) {
+    status.textContent = "Model error. Check your model URL and internet connection.";
+    document.getElementById("analyze").disabled = false;
+  }
+});
+</script>
+</body>
+</html>
